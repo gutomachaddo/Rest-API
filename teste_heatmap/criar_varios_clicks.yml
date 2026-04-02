@@ -1,0 +1,27 @@
+info:
+  name: criar_varios_clicks
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: http://localhost:3000/sessions/{{sessionId}}/clicks/batch
+  body:
+    type: json
+    data: |-
+      {
+        "clicks": [
+          { "x": 50,  "y": 100, "intensity": 1 },
+          { "x": 80,  "y": 120, "intensity": 2 },
+          { "x": 200, "y": 400, "intensity": 5 },
+          { "x": 310, "y": 600, "intensity": 3 },
+          { "x": 370, "y": 800, "intensity": 4 }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

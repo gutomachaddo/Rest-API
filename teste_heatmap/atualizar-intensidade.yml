@@ -1,0 +1,21 @@
+info:
+  name: atualizar-intensidade
+  type: http
+  seq: 7
+
+http:
+  method: PATCH
+  url: http://localhost:3000/sessions/{{sessionId}}/clicks/2add1696-ae5f-49ce-bd02-5550f46e180c
+  body:
+    type: json
+    data: |-
+      {
+        "intensity": 10
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

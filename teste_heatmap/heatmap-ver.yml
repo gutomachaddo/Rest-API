@@ -1,0 +1,22 @@
+info:
+  name: heatmap-ver
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: http://localhost:3000/sessions/{{sessionId}}/clicks/heatmap?width=390&height=844
+  params:
+    - name: width
+      value: "390"
+      type: query
+    - name: height
+      value: "844"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
