@@ -2,131 +2,57 @@ const express = require("express");
 const { v4: uuidv4 } = require("uuid");
 const { withValidation, withErrorHandler } = require("../utils");
 
-const createSessionRouter = (db, persist) => {
+const createSessionRouter = (prisma) => {
   const router = express.Router();
 
-  // GET /sessions - Lista todas as sessões
-  router.get(
-    "/",
-    withErrorHandler(async (req, res) => {
-      const result = db.exec(
-        "SELECT id, name, created_at, updated_at FROM sessions ORDER BY created_at DESC"
-      );
+  router.get("/", withErrorHandler(async (req, res) => {
+    const sessions = await prisma.session.findMany({ orderBy: { created_at: "desc" } });
+    res.json({ sessions, total: sessions.length });
+  }));
 
-      const sessions =
-        result.length > 0
-          ? result[0].values.map(([id, name, created_at, updated_at]) => ({
-              id,
-              name,
-              created_at,
-              updated_at,
-            }))
-          : [];
+  router.get("/:id", withErrorHandler(async (req, res) => {
+    const session = await prisma.session.findUnique({ where: { id: req.params.id } });
+    if (!session) return res.status(404).json({ error: "Sessão não encontrada" });
+    res.json(session);
+  }));
 
-      res.json({ sessions, total: sessions.length });
-    })
-  );
+  router.post("/", withErrorHandler(async (req, res) => {
+    const { name } = req.body || {};
+    const session = await prisma.session.create({
+      data: { id: uuidv4(), name: name || null },
+    });
+    res.status(201).json(session);
+  }));
 
-  // GET /sessions/:id - Busca uma sessão específica
-  router.get(
-    "/:id",
-    withErrorHandler(async (req, res) => {
-      const { id } = req.params;
+  router.put("/:id", withValidation(["name"], withErrorHandler(async (req, res) => {
+    const { id } = req.params;
+    const exists = await prisma.session.findUnique({ where: { id } });
+    if (!exists) return res.status(404).json({ error: "Sessão não encontrada" });
 
-      const result = db.exec(
-        "SELECT id, name, created_at, updated_at FROM sessions WHERE id = ?",
-        [id]
-      );
+    const session = await prisma.session.update({ where: { id }, data: { name: req.body.name } });
+    res.json(session);
+  })));
 
-      if (!result.length || !result[0].values.length) {
-        return res.status(404).json({ error: "Sessão não encontrada" });
-      }
+  router.patch("/:id", withErrorHandler(async (req, res) => {
+    const { id } = req.params;
+    const { name } = req.body || {};
+    const exists = await prisma.session.findUnique({ where: { id } });
+    if (!exists) return res.status(404).json({ error: "Sessão não encontrada" });
 
-      const [sid, name, created_at, updated_at] = result[0].values[0];
-      res.json({ id: sid, name, created_at, updated_at });
-    })
-  );
+    const session = await prisma.session.update({
+      where: { id },
+      data: { ...(name !== undefined && { name }) },
+    });
+    res.json(session);
+  }));
 
-  // POST /sessions - Cria uma nova sessão
-  router.post(
-    "/",
-    withErrorHandler(async (req, res) => {
-      const { name } = req.body || {};
-      const id = uuidv4();
-      const now = new Date().toISOString();
+  router.delete("/:id", withErrorHandler(async (req, res) => {
+    const exists = await prisma.session.findUnique({ where: { id: req.params.id } });
+    if (!exists) return res.status(404).json({ error: "Sessão não encontrada" });
 
-      db.run(
-        "INSERT INTO sessions (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
-        [id, name || null, now, now]
-      );
-      persist();
-
-      res.status(201).json({ id, name: name || null, created_at: now, updated_at: now });
-    })
-  );
-
-  // PUT /sessions/:id - Atualiza completamente uma sessão
-  router.put(
-    "/:id",
-    withValidation(["name"],
-      withErrorHandler(async (req, res) => {
-        const { id } = req.params;
-        const { name } = req.body;
-        const now = new Date().toISOString();
-
-        const exists = db.exec("SELECT id FROM sessions WHERE id = ?", [id]);
-        if (!exists.length || !exists[0].values.length) {
-          return res.status(404).json({ error: "Sessão não encontrada" });
-        }
-
-        db.run("UPDATE sessions SET name = ?, updated_at = ? WHERE id = ?", [name, now, id]);
-        persist();
-
-        res.json({ id, name, updated_at: now });
-      })
-    )
-  );
-
-  // PATCH /sessions/:id - Atualiza parcialmente uma sessão
-  router.patch(
-    "/:id",
-    withErrorHandler(async (req, res) => {
-      const { id } = req.params;
-      const { name } = req.body || {};
-      const now = new Date().toISOString();
-
-      const exists = db.exec("SELECT id, name FROM sessions WHERE id = ?", [id]);
-      if (!exists.length || !exists[0].values.length) {
-        return res.status(404).json({ error: "Sessão não encontrada" });
-      }
-
-      const currentName = exists[0].values[0][1];
-      const updatedName = name !== undefined ? name : currentName;
-
-      db.run("UPDATE sessions SET name = ?, updated_at = ? WHERE id = ?", [updatedName, now, id]);
-      persist();
-
-      res.json({ id, name: updatedName, updated_at: now });
-    })
-  );
-
-  // DELETE /sessions/:id - Deleta uma sessão (e seus clicks por CASCADE)
-  router.delete(
-    "/:id",
-    withErrorHandler(async (req, res) => {
-      const { id } = req.params;
-
-      const exists = db.exec("SELECT id FROM sessions WHERE id = ?", [id]);
-      if (!exists.length || !exists[0].values.length) {
-        return res.status(404).json({ error: "Sessão não encontrada" });
-      }
-
-      db.run("DELETE FROM sessions WHERE id = ?", [id]);
-      persist();
-
-      res.status(204).send();
-    })
-  );
+    await prisma.session.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  }));
 
   return router;
 };

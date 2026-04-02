@@ -7,18 +7,16 @@ const { createClickRouter } = require("./src/routes/clicks");
 const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
-  const { db, persist } = await initDb();
+  const { prisma } = await initDb();
 
   const app = express();
 
   app.use(cors());
   app.use(express.json());
 
-  // Rotas
-  app.use("/sessions", createSessionRouter(db, persist));
-  app.use("/sessions/:sessionId/clicks", createClickRouter(db, persist));
+  app.use("/sessions", createSessionRouter(prisma));
+  app.use("/sessions/:sessionId/clicks", createClickRouter(prisma));
 
-  // Health check
   app.get("/", (req, res) => {
     res.json({
       name: "Heatmap API",
@@ -46,7 +44,6 @@ const startServer = async () => {
     });
   });
 
-  // 404 handler
   app.use((req, res) => {
     res.status(404).json({ error: "Rota não encontrada" });
   });

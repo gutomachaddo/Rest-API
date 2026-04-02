@@ -1,222 +1,99 @@
 const express = require("express");
 const { v4: uuidv4 } = require("uuid");
-const {
-  withValidation,
-  withErrorHandler,
-  flattenClicks,
-  groupClicksByRegion,
-  sumIntensity,
-} = require("../utils");
+const { withValidation, withErrorHandler, flattenClicks, groupClicksByRegion, sumIntensity } = require("../utils");
 
-const createClickRouter = (db, persist) => {
+const createClickRouter = (prisma) => {
   const router = express.Router({ mergeParams: true });
 
-  // GET /sessions/:sessionId/clicks - Lista todos os clicks de uma sessão
-  router.get(
-    "/",
-    withErrorHandler(async (req, res) => {
-      const { sessionId } = req.params;
+  router.get("/", withErrorHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    const session = await prisma.session.findUnique({ where: { id: sessionId } });
+    if (!session) return res.status(404).json({ error: "Sessão não encontrada" });
 
-      const sessionExists = db.exec("SELECT id FROM sessions WHERE id = ?", [sessionId]);
-      if (!sessionExists.length || !sessionExists[0].values.length) {
-        return res.status(404).json({ error: "Sessão não encontrada" });
-      }
+    const clicks = await prisma.click.findMany({ where: { session_id: sessionId }, orderBy: { created_at: "asc" } });
+    res.json({ clicks, total: clicks.length, totalIntensity: sumIntensity(clicks) });
+  }));
 
-      const result = db.exec(
-        "SELECT id, x, y, intensity, session_id, created_at FROM clicks WHERE session_id = ? ORDER BY created_at ASC",
-        [sessionId]
-      );
+  router.get("/heatmap", withErrorHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    const { width = 390, height = 844 } = req.query;
 
-      const clicks =
-        result.length > 0
-          ? result[0].values.map(([id, x, y, intensity, session_id, created_at]) => ({
-              id,
-              x,
-              y,
-              intensity,
-              session_id,
-              created_at,
-            }))
-          : [];
+    const session = await prisma.session.findUnique({ where: { id: sessionId } });
+    if (!session) return res.status(404).json({ error: "Sessão não encontrada" });
 
-      // Usa a função recursiva sumIntensity para calcular o total de intensidade
-      const totalIntensity = sumIntensity(clicks);
+    const clicks = await prisma.click.findMany({ where: { session_id: sessionId } });
+    const bounds = { minX: 0, maxX: Number(width), minY: 0, maxY: Number(height) };
 
-      res.json({ clicks, total: clicks.length, totalIntensity });
-    })
-  );
+    res.json({
+      sessionId,
+      totalClicks: clicks.length,
+      totalIntensity: sumIntensity(flattenClicks(clicks)),
+      screenBounds: bounds,
+      heatTree: groupClicksByRegion(clicks, bounds),
+    });
+  }));
 
-  // GET /sessions/:sessionId/clicks/heatmap - Retorna dados agrupados por região (recursivo)
-  router.get(
-    "/heatmap",
-    withErrorHandler(async (req, res) => {
-      const { sessionId } = req.params;
-      const { width = 390, height = 844 } = req.query;
+  router.post("/", withValidation(["x", "y"], withErrorHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    const { x, y, intensity = 1 } = req.body;
 
-      const sessionExists = db.exec("SELECT id, name FROM sessions WHERE id = ?", [sessionId]);
-      if (!sessionExists.length || !sessionExists[0].values.length) {
-        return res.status(404).json({ error: "Sessão não encontrada" });
-      }
+    const session = await prisma.session.findUnique({ where: { id: sessionId } });
+    if (!session) return res.status(404).json({ error: "Sessão não encontrada" });
 
-      const result = db.exec(
-        "SELECT id, x, y, intensity FROM clicks WHERE session_id = ?",
-        [sessionId]
-      );
+    const click = await prisma.click.create({ data: { id: uuidv4(), x, y, intensity, session_id: sessionId } });
+    res.status(201).json(click);
+  })));
 
-      const clicks =
-        result.length > 0
-          ? result[0].values.map(([id, x, y, intensity]) => ({ id, x, y, intensity }))
-          : [];
+  router.post("/batch", withErrorHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    const { clicks: rawClicks } = req.body || {};
 
-      // Usa função recursiva groupClicksByRegion para gerar a árvore de calor
-      const bounds = { minX: 0, maxX: Number(width), minY: 0, maxY: Number(height) };
-      const heatTree = groupClicksByRegion(clicks, bounds);
+    if (!Array.isArray(rawClicks) || rawClicks.length === 0) {
+      return res.status(400).json({ error: "Envie um array 'clicks' com ao menos 1 item" });
+    }
 
-      // Usa a função recursiva flattenClicks para garantir lista plana
-      const flatClicks = flattenClicks(clicks);
-      const totalIntensity = sumIntensity(flatClicks);
+    const session = await prisma.session.findUnique({ where: { id: sessionId } });
+    if (!session) return res.status(404).json({ error: "Sessão não encontrada" });
 
-      res.json({
-        sessionId,
-        totalClicks: clicks.length,
-        totalIntensity,
-        screenBounds: bounds,
-        heatTree,
-      });
-    })
-  );
+    const data = flattenClicks(rawClicks).map((c) => ({
+      id: uuidv4(), x: c.x, y: c.y, intensity: c.intensity || 1, session_id: sessionId,
+    }));
 
-  // POST /sessions/:sessionId/clicks - Registra um click
-  router.post(
-    "/",
-    withValidation(
-      ["x", "y"],
-      withErrorHandler(async (req, res) => {
-        const { sessionId } = req.params;
-        const { x, y, intensity = 1 } = req.body;
+    await prisma.click.createMany({ data });
+    res.status(201).json({ created: data, total: data.length });
+  }));
 
-        const sessionExists = db.exec("SELECT id FROM sessions WHERE id = ?", [sessionId]);
-        if (!sessionExists.length || !sessionExists[0].values.length) {
-          return res.status(404).json({ error: "Sessão não encontrada" });
-        }
+  router.patch("/:id", withErrorHandler(async (req, res) => {
+    const { sessionId, id } = req.params;
+    const { intensity } = req.body || {};
 
-        const id = uuidv4();
-        const now = new Date().toISOString();
+    if (intensity === undefined) return res.status(400).json({ error: "Campo 'intensity' é obrigatório" });
 
-        db.run(
-          "INSERT INTO clicks (id, x, y, intensity, session_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-          [id, x, y, intensity, sessionId, now]
-        );
-        persist();
+    const exists = await prisma.click.findFirst({ where: { id, session_id: sessionId } });
+    if (!exists) return res.status(404).json({ error: "Click não encontrado" });
 
-        res.status(201).json({ id, x, y, intensity, session_id: sessionId, created_at: now });
-      })
-    )
-  );
+    const click = await prisma.click.update({ where: { id }, data: { intensity } });
+    res.json({ id: click.id, intensity: click.intensity, updated: true });
+  }));
 
-  // POST /sessions/:sessionId/clicks/batch - Registra múltiplos clicks de uma vez
-  router.post(
-    "/batch",
-    withErrorHandler(async (req, res) => {
-      const { sessionId } = req.params;
-      const { clicks: rawClicks } = req.body || {};
+  router.delete("/", withErrorHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    const session = await prisma.session.findUnique({ where: { id: sessionId } });
+    if (!session) return res.status(404).json({ error: "Sessão não encontrada" });
 
-      if (!Array.isArray(rawClicks) || rawClicks.length === 0) {
-        return res.status(400).json({ error: "Envie um array 'clicks' com ao menos 1 item" });
-      }
+    await prisma.click.deleteMany({ where: { session_id: sessionId } });
+    await prisma.session.update({ where: { id: sessionId }, data: { updated_at: new Date() } });
+    res.json({ message: "Todos os clicks foram removidos", sessionId });
+  }));
 
-      const sessionExists = db.exec("SELECT id FROM sessions WHERE id = ?", [sessionId]);
-      if (!sessionExists.length || !sessionExists[0].values.length) {
-        return res.status(404).json({ error: "Sessão não encontrada" });
-      }
+  router.delete("/:id", withErrorHandler(async (req, res) => {
+    const { sessionId, id } = req.params;
+    const exists = await prisma.click.findFirst({ where: { id, session_id: sessionId } });
+    if (!exists) return res.status(404).json({ error: "Click não encontrado" });
 
-      // flattenClicks garante que listas aninhadas também funcionem
-      const flatClicks = flattenClicks(rawClicks);
-      const now = new Date().toISOString();
-
-      const created = flatClicks.map((click) => {
-        const id = uuidv4();
-        db.run(
-          "INSERT INTO clicks (id, x, y, intensity, session_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-          [id, click.x, click.y, click.intensity || 1, sessionId, now]
-        );
-        return { id, x: click.x, y: click.y, intensity: click.intensity || 1, session_id: sessionId, created_at: now };
-      });
-
-      persist();
-
-      res.status(201).json({ created, total: created.length });
-    })
-  );
-
-  // PATCH /sessions/:sessionId/clicks/:id - Atualiza intensidade de um click
-  router.patch(
-    "/:id",
-    withErrorHandler(async (req, res) => {
-      const { sessionId, id } = req.params;
-      const { intensity } = req.body || {};
-
-      if (intensity === undefined) {
-        return res.status(400).json({ error: "Campo 'intensity' é obrigatório" });
-      }
-
-      const exists = db.exec(
-        "SELECT id FROM clicks WHERE id = ? AND session_id = ?",
-        [id, sessionId]
-      );
-      if (!exists.length || !exists[0].values.length) {
-        return res.status(404).json({ error: "Click não encontrado" });
-      }
-
-      db.run("UPDATE clicks SET intensity = ? WHERE id = ?", [intensity, id]);
-      persist();
-
-      res.json({ id, intensity, updated: true });
-    })
-  );
-
-  // DELETE /sessions/:sessionId/clicks - Reseta todos os clicks da sessão
-  router.delete(
-    "/",
-    withErrorHandler(async (req, res) => {
-      const { sessionId } = req.params;
-
-      const sessionExists = db.exec("SELECT id FROM sessions WHERE id = ?", [sessionId]);
-      if (!sessionExists.length || !sessionExists[0].values.length) {
-        return res.status(404).json({ error: "Sessão não encontrada" });
-      }
-
-      db.run("DELETE FROM clicks WHERE session_id = ?", [sessionId]);
-      persist();
-
-      // Atualiza o updated_at da sessão
-      db.run("UPDATE sessions SET updated_at = ? WHERE id = ?", [new Date().toISOString(), sessionId]);
-      persist();
-
-      res.json({ message: "Todos os clicks foram removidos", sessionId });
-    })
-  );
-
-  // DELETE /sessions/:sessionId/clicks/:id - Remove um click específico
-  router.delete(
-    "/:id",
-    withErrorHandler(async (req, res) => {
-      const { sessionId, id } = req.params;
-
-      const exists = db.exec(
-        "SELECT id FROM clicks WHERE id = ? AND session_id = ?",
-        [id, sessionId]
-      );
-      if (!exists.length || !exists[0].values.length) {
-        return res.status(404).json({ error: "Click não encontrado" });
-      }
-
-      db.run("DELETE FROM clicks WHERE id = ?", [id]);
-      persist();
-
-      res.status(204).send();
-    })
-  );
+    await prisma.click.delete({ where: { id } });
+    res.status(204).send();
+  }));
 
   return router;
 };

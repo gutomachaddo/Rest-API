@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Session {
+  id         String   @id
+  name       String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  clicks     Click[]
+}
+
+model Click {
+  id         String   @id
+  x          Float
+  y          Float
+  intensity  Int      @default(1)
+  session_id String
+  created_at DateTime @default(now())
+  session    Session  @relation(fields: [session_id], references: [id], onDelete: Cascade)
+}

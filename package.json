@@ -1,16 +1,22 @@
 {
   "dependencies": {
+    "@libsql/client": "^0.17.2",
+    "@prisma/adapter-libsql": "^7.6.0",
+    "@prisma/client": "^7.6.0",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.0",
     "express": "^5.2.1",
     "nodemon": "^3.1.14",
-    "sql.js": "^1.14.1",
+    "prisma": "^7.6.0",
     "uuid": "^13.0.0"
   },
   "name": "rest_api",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "devDependencies": {},
+  "prisma": {
+    "config": "prisma.config.ts"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -25,5 +31,8 @@
   "bugs": {
     "url": "https://github.com/gutomachaddo/Rest-API/issues"
   },
-  "homepage": "https://github.com/gutomachaddo/Rest-API#readme"
+  "homepage": "https://github.com/gutomachaddo/Rest-API#readme",
+  "devDependencies": {
+    "tsx": "^4.21.0"
+  }
 }
