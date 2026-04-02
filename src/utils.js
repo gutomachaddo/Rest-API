@@ -39,7 +39,7 @@ const flattenClicks = (items, depth = 0) => {
   return [head, ...flattenClicks(tail, depth)];
 };
 
-// ─── Função Recursiva: groupClicksByRegion ───────────────────────────────────
+// Função Recursiva: groupClicksByRegion
 // Agrupa clicks por regiões da tela recursivamente (divide em quadrantes)
 const groupClicksByRegion = (clicks, bounds, depth = 0) => {
   if (clicks.length === 0 || depth >= 3) {
@@ -69,7 +69,7 @@ const groupClicksByRegion = (clicks, bounds, depth = 0) => {
   };
 };
 
-// ─── Função Recursiva: sumIntensity ──────────────────────────────────────────
+// Função Recursiva: sumIntensity
 // Soma as intensidades de uma lista de clicks recursivamente
 const sumIntensity = (clicks) => {
   if (clicks.length === 0) return 0;

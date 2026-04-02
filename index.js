@@ -14,11 +14,11 @@ const startServer = async () => {
   app.use(cors());
   app.use(express.json());
 
-  // ── Rotas ────────────────────────────────────────────────────────────────────
+  // Rotas
   app.use("/sessions", createSessionRouter(db, persist));
   app.use("/sessions/:sessionId/clicks", createClickRouter(db, persist));
 
-  // ── Health check ─────────────────────────────────────────────────────────────
+  // Health check
   app.get("/", (req, res) => {
     res.json({
       name: "Heatmap API",
@@ -46,14 +46,14 @@ const startServer = async () => {
     });
   });
 
-  // ── 404 handler ──────────────────────────────────────────────────────────────
+  // 404 handler
   app.use((req, res) => {
     res.status(404).json({ error: "Rota não encontrada" });
   });
 
   app.listen(PORT, () => {
-    console.log(`\n🔥 Heatmap API rodando em http://localhost:${PORT}`);
-    console.log(`📖 Endpoints disponíveis em http://localhost:${PORT}/\n`);
+    console.log(`\nHeatmap API rodando em http://localhost:${PORT}`);
+    console.log(`Endpoints disponíveis em http://localhost:${PORT}/\n`);
   });
 };
 

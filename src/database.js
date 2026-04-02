@@ -9,6 +9,8 @@ const ensureDataDir = () => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 };
 
+// A cada   operação no banco, pegam os dados da RAM e salvam
+// no arquivo heatmap.db
 const persistDb = (db) => {
   const data = db.export();
   fs.writeFileSync(DB_PATH, Buffer.from(data));
