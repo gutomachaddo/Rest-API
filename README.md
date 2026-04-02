@@ -50,3 +50,6 @@ Usuário clica na tela   → POST /sessions/:id/clicks
 Botão "Ver Heatmap"     → GET  /sessions/:id/clicks/heatmap
 Botão "Resetar"         → DELETE /sessions/:id/clicks
 ```
+
+
+## Devs: Augusto e Ryan
