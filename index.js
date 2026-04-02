@@ -1,0 +1,60 @@
+const express = require("express");
+const cors = require("cors");
+const { initDb } = require("./src/database");
+const { createSessionRouter } = require("./src/routes/sessions");
+const { createClickRouter } = require("./src/routes/clicks");
+
+const PORT = process.env.PORT || 3000;
+
+const startServer = async () => {
+  const { db, persist } = await initDb();
+
+  const app = express();
+
+  app.use(cors());
+  app.use(express.json());
+
+  // ── Rotas ────────────────────────────────────────────────────────────────────
+  app.use("/sessions", createSessionRouter(db, persist));
+  app.use("/sessions/:sessionId/clicks", createClickRouter(db, persist));
+
+  // ── Health check ─────────────────────────────────────────────────────────────
+  app.get("/", (req, res) => {
+    res.json({
+      name: "Heatmap API",
+      version: "1.0.0",
+      status: "online",
+      endpoints: {
+        sessions: {
+          "GET    /sessions": "Lista todas as sessões",
+          "GET    /sessions/:id": "Busca uma sessão",
+          "POST   /sessions": "Cria uma nova sessão",
+          "PUT    /sessions/:id": "Substitui uma sessão",
+          "PATCH  /sessions/:id": "Atualiza parcialmente uma sessão",
+          "DELETE /sessions/:id": "Remove uma sessão e seus clicks",
+        },
+        clicks: {
+          "GET    /sessions/:id/clicks": "Lista todos os clicks da sessão",
+          "GET    /sessions/:id/clicks/heatmap": "Dados agrupados por região (heatmap tree)",
+          "POST   /sessions/:id/clicks": "Registra um click",
+          "POST   /sessions/:id/clicks/batch": "Registra múltiplos clicks",
+          "PATCH  /sessions/:id/clicks/:clickId": "Atualiza intensidade de um click",
+          "DELETE /sessions/:id/clicks": "Remove todos os clicks (reset)",
+          "DELETE /sessions/:id/clicks/:clickId": "Remove um click específico",
+        },
+      },
+    });
+  });
+
+  // ── 404 handler ──────────────────────────────────────────────────────────────
+  app.use((req, res) => {
+    res.status(404).json({ error: "Rota não encontrada" });
+  });
+
+  app.listen(PORT, () => {
+    console.log(`\n🔥 Heatmap API rodando em http://localhost:${PORT}`);
+    console.log(`📖 Endpoints disponíveis em http://localhost:${PORT}/\n`);
+  });
+};
+
+startServer();
