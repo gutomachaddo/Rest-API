@@ -1,19 +1,11 @@
-const { PrismaClient } = require("@prisma/client");
-const { PrismaLibSql } = require("@prisma/adapter-libsql");
-const path = require("path");
-const fs = require("fs");
+import "dotenv/config";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
 
-const initDb = async () => {
-  const dataDir = path.resolve("data");
-  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+const connectionString = `${process.env.DATABASE_URL}`;
+const adapter = new PrismaPg({ connectionString });
+const prisma = new PrismaClient({ adapter });
 
-  const adapter = new PrismaLibSql({
-    url: `file:${path.resolve("data/heatmap.db")}`,
-  });
-
-  const prisma = new PrismaClient({ adapter });
-
+export const initDb = async () => {
   return { prisma };
 };
-
-module.exports = { initDb };

@@ -1,8 +1,8 @@
-const express = require("express");
-const { v4: uuidv4 } = require("uuid");
-const { withValidation, withErrorHandler } = require("../utils");
+import { v4 as uuidv4 } from "uuid";
+import { withValidation, withErrorHandler } from "../utils.js";
+import express from 'express';
 
-const createSessionRouter = (prisma) => {
+export const createSessionRouter = (prisma) => {
   const router = express.Router();
 
   router.get("/", withErrorHandler(async (req, res) => {
@@ -56,5 +56,3 @@ const createSessionRouter = (prisma) => {
 
   return router;
 };
-
-module.exports = { createSessionRouter };

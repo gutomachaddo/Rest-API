@@ -1,8 +1,8 @@
-const express = require("express");
-const { v4: uuidv4 } = require("uuid");
-const { withValidation, withErrorHandler, flattenClicks, groupClicksByRegion, sumIntensity } = require("../utils");
+import { v4 as uuidv4 } from "uuid";
+import { withValidation, withErrorHandler, flattenClicks, groupClicksByRegion, sumIntensity } from "../utils.js";
+import express from 'express';
 
-const createClickRouter = (prisma) => {
+export const createClickRouter = (prisma) => {
   const router = express.Router({ mergeParams: true });
 
   router.get("/", withErrorHandler(async (req, res) => {
@@ -97,5 +97,3 @@ const createClickRouter = (prisma) => {
 
   return router;
 };
-
-module.exports = { createClickRouter };

@@ -77,7 +77,7 @@ const sumIntensity = (clicks) => {
   return head.intensity + sumIntensity(tail);
 };
 
-module.exports = {
+export {
   withValidation,
   withErrorHandler,
   flattenClicks,

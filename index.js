@@ -1,8 +1,8 @@
-const express = require("express");
-const cors = require("cors");
-const { initDb } = require("./src/database");
-const { createSessionRouter } = require("./src/routes/sessions");
-const { createClickRouter } = require("./src/routes/clicks");
+import express from "express";
+import cors from "cors";
+import { initDb } from "./src/database.js";
+import { createSessionRouter } from "./src/routes/sessions.js";
+import { createClickRouter } from "./src/routes/clicks.js";
 
 const PORT = process.env.PORT || 3000;
 
