@@ -1,0 +1,21 @@
+info:
+  name: substituir nome sessao
+  type: http
+  seq: 9
+
+http:
+  method: PUT
+  url: https://rest-api-black-omega.vercel.app/sessions/90cfb9ab-8542-40fc-afd6-739efdafdb6a
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Bora Bill Eduarda!!!"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,15 @@
+info:
+  name: listar clicks
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: https://rest-api-black-omega.vercel.app/sessions/90cfb9ab-8542-40fc-afd6-739efdafdb6a/clicks
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

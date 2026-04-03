@@ -1,17 +1,11 @@
 info:
-  name: sdsadassa
+  name: listar sessoes
   type: http
-  seq: 1
+  seq: 5
 
 http:
-  method: POST
+  method: GET
   url: https://rest-api-black-omega.vercel.app/sessions
-  body:
-    type: json
-    data: |-
-      {
-        "name": "Criando Algo"
-      }
   auth: inherit
 
 settings:

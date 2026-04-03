@@ -1,0 +1,15 @@
+info:
+  name: deletar-clique
+  type: http
+  seq: 8
+
+http:
+  method: DELETE
+  url: https://rest-api-black-omega.vercel.app/sessions/90cfb9ab-8542-40fc-afd6-739efdafdb6a/clicks
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

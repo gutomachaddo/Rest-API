@@ -1,0 +1,21 @@
+info:
+  name: atualizar intensidade
+  type: http
+  seq: 7
+
+http:
+  method: PATCH
+  url: https://rest-api-black-omega.vercel.app/sessions/90cfb9ab-8542-40fc-afd6-739efdafdb6a/clicks/ae97d9e7-0b20-469c-a293-3e8751bfb775
+  body:
+    type: json
+    data: |-
+      {
+      "intensity": 20
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

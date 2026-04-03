@@ -1,0 +1,21 @@
+info:
+  name: criar sessao
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: https://rest-api-black-omega.vercel.app/sessions
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Criando Algo"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
