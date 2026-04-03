@@ -4,7 +4,7 @@ Backend REST para um app mobile de heatmap em React Native. Registra cliques na 
 
 ## Stack
 
-- Node.js
+- Node
 - Express
 - sql.js (SQLite)
 - CORS
